@@ -11,12 +11,16 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -68,21 +72,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     @Override
                     public boolean onMyLocationButtonClick() {
                         //透過位置服務，取得目前裝置所在
-                        gpsLocation();
+                        fuseLocation();
+//                        gpsLocation();
                         return false;
                     }
                 });
     }
 
     @SuppressLint("MissingPermission")
+    private void fuseLocation() {
+        FusedLocationProviderClient client =
+            LocationServices.getFusedLocationProviderClient(this);
+        client.getLastLocation().addOnCompleteListener(
+            this, new OnCompleteListener<Location>() {
+            @Override
+            public void onComplete(@NonNull Task<Location> task) {
+                if (task.isSuccessful()){
+                    Location location = task.getResult();
+                    Log.i("LOCATION", location.getLatitude() + "/"
+                            + location.getLongitude());
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                            new LatLng(location.getLatitude(),
+                                    location.getLongitude())
+                            , 15));
+                }
+            }
+        });
+    }
+
+    @SuppressLint("MissingPermission")
     private void gpsLocation() {
-        LocationManager locationManager=
+        LocationManager locationManager =
                 (LocationManager) getSystemService(LOCATION_SERVICE);
         String provider = "gps";
         Location location = locationManager.getLastKnownLocation(provider);
         if (location != null) {
-            Log.i("LOCATION", location.getLatitude()+"/"
-                    +location.getLongitude());
+            Log.i("LOCATION", location.getLatitude() + "/"
+                    + location.getLongitude());
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                     new LatLng(location.getLatitude(),
                             location.getLongitude())

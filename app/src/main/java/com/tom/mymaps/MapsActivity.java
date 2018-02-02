@@ -12,6 +12,9 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -26,7 +29,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private static final int REQUEST_LOCATION = 2;
-
+    LocationRequest locationRequest;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +60,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     REQUEST_LOCATION);
         } else {
             setupMyLocation();
+            createLocationRequest();
+            fuseLocationRequest();
         }
         // Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
@@ -78,26 +83,50 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 });
     }
+    private void createLocationRequest(){
+        locationRequest = new LocationRequest();
+        locationRequest.setInterval(5000);
+        locationRequest.setFastestInterval (2000);
+        locationRequest.setPriority(
+                LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fuseLocationRequest(){
+        FusedLocationProviderClient client =
+                LocationServices.getFusedLocationProviderClient(this);
+        client.requestLocationUpdates(locationRequest,
+                new LocationCallback(){
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        Location location = locationResult.getLastLocation();
+                        Log.i("UPDATE", location.toString());
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(location.getLatitude(),
+                                        location.getLongitude())
+                                , 15));
+                    }
+                }
+                , null);
+    }
 
     @SuppressLint("MissingPermission")
     private void fuseLocation() {
         FusedLocationProviderClient client =
-            LocationServices.getFusedLocationProviderClient(this);
+                LocationServices.getFusedLocationProviderClient(this);
         client.getLastLocation().addOnCompleteListener(
-            this, new OnCompleteListener<Location>() {
-            @Override
-            public void onComplete(@NonNull Task<Location> task) {
-                if (task.isSuccessful()){
-                    Location location = task.getResult();
-                    Log.i("LOCATION", location.getLatitude() + "/"
-                            + location.getLongitude());
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                            new LatLng(location.getLatitude(),
-                                    location.getLongitude())
-                            , 15));
-                }
-            }
-        });
+                this, new OnCompleteListener<Location>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Location> task) {
+                        if (task.isSuccessful()) {
+                            Location location = task.getResult();
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(location.getLatitude(),
+                                            location.getLongitude())
+                                    , 15));
+                        }
+                    }
+                });
     }
 
     @SuppressLint("MissingPermission")
